@@ -1,8 +1,17 @@
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks, status
+from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
 from src.whatsapp.signature import verify_signature
 from src.whatsapp.parser import parse_webhook_messages
 from src.config import settings
 from src.whatsapp.client import WhatsAppClient
+from src.db.connection import SessionLocal
+from src.agent.claude import process_message_with_agent
+from src.agent.conversation import (
+    get_or_create_conversation,
+    load_conversation_history,
+    save_message,
+    get_patient_or_create,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,33 +57,79 @@ async def receive_message(request: Request, background_tasks: BackgroundTasks):
 
         for wa_id, message, meta_message_id in messages:
             logger.info(f"Received message from {wa_id}: {message.type}")
-            # Queue for background processing
             background_tasks.add_task(
                 process_message, wa_id, message, meta_message_id
             )
     except Exception as e:
         logger.error(f"Error parsing webhook: {e}")
 
-    # Return 200 immediately
     return {"status": "ok"}
 
 
 async def process_message(wa_id: str, message, meta_message_id: str):
-    """
-    Process incoming message in background.
-    This is a placeholder for now; will be replaced with actual agent logic.
-    """
+    """Process incoming message with Claude agent."""
     logger.info(f"Processing message {meta_message_id} from {wa_id}")
+
+    db = SessionLocal()
 
     try:
         # Mark as read
         await whatsapp_client.mark_as_read(message.id)
 
-        # For now, just echo the message back
-        if message.text:
+        # Get or create patient and conversation
+        patient = get_patient_or_create(db, wa_id)
+        conversation = get_or_create_conversation(db, wa_id)
+
+        # Save incoming message
+        save_message(
+            db,
+            wa_id,
+            "inbound",
+            message.type,
+            message.text.body if message.text else None,
+            meta_message_id,
+        )
+
+        # Check if conversation is escalated (human takeover)
+        if conversation.is_escalated:
+            logger.info(f"Conversation {wa_id} is escalated. Waiting for human.")
+            return
+
+        # Load conversation history
+        history = load_conversation_history(db, wa_id)
+
+        # Show typing indicator
+        await whatsapp_client.send_typing_indicator(wa_id)
+
+        # Process with Claude agent
+        message_text = message.text.body if message.text else "[Non-text message]"
+        response_text = await process_message_with_agent(
+            db,
+            wa_id,
+            message_text,
+            history,
+        )
+
+        # Save outgoing message
+        save_message(
+            db,
+            wa_id,
+            "outbound",
+            "text",
+            response_text,
+        )
+
+        # Send response
+        await whatsapp_client.send_text_message(wa_id, response_text)
+
+    except Exception as e:
+        logger.error(f"Error processing message {meta_message_id}: {e}", exc_info=True)
+        try:
             await whatsapp_client.send_text_message(
                 wa_id,
-                f"Echo: {message.text.body}"
+                "Sorry, I encountered an error. Please try again or contact support."
             )
-    except Exception as e:
-        logger.error(f"Error processing message: {e}")
+        except Exception as send_error:
+            logger.error(f"Error sending error message: {send_error}")
+    finally:
+        db.close()
