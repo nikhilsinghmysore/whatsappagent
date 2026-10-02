@@ -35,8 +35,9 @@ app.add_middleware(
 # Routes
 app.include_router(webhook.router)
 app.include_router(health.router)
-from src.api import admin
+from src.api import admin, privacy
 app.include_router(admin.router)
+app.include_router(privacy.router)
 
 
 @app.get("/")
