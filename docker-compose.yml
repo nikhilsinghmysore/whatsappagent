@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: homeclinic-db
+    environment:
+      POSTGRES_USER: homeclinic
+      POSTGRES_PASSWORD: homeclinic_pw
+      POSTGRES_DB: homeclinic
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeclinic"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: homeclinic-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: homeclinic-app
+    environment:
+      DATABASE_URL: postgresql://homeclinic:homeclinic_pw@db:5432/homeclinic
+      REDIS_URL: redis://redis:6379
+      DEBUG: "false"
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - .env
+
+  worker:
+    build: .
+    container_name: homeclinic-worker
+    environment:
+      DATABASE_URL: postgresql://homeclinic:homeclinic_pw@db:5432/homeclinic
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: python -m src.workers.run_worker
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
+  redis_data:
