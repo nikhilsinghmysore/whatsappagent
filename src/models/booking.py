@@ -5,6 +5,7 @@ from src.db import BaseModel
 class Booking(BaseModel):
     __tablename__ = "bookings"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
     patient_wa_id = Column(String(20), ForeignKey("patients.wa_id"), nullable=False, index=True)
     provider_id = Column(Integer, ForeignKey("providers.id"), nullable=True, index=True)
     service_id = Column(Integer, ForeignKey("services.id"), nullable=False)

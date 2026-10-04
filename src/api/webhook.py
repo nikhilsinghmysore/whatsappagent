@@ -15,28 +15,34 @@ from src.agent.conversation import (
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/webhook", tags=["webhook"])
+router = APIRouter(tags=["webhook"])
 
 whatsapp_client = WhatsAppClient()
 
 
-@router.get("/")
+@router.get("/webhook")
 async def verify_webhook(
     hub_mode: str = None,
     hub_challenge: str = None,
     hub_verify_token: str = None,
 ):
     """Meta webhook verification (GET request)."""
+    logger.info(f"Webhook verification: mode={hub_mode}, challenge={hub_challenge}, token={hub_verify_token}")
+    logger.info(f"Expected token: {settings.whatsapp_verify_token}")
+
     if hub_mode != "subscribe":
+        logger.error(f"Invalid mode: {hub_mode}")
         raise HTTPException(status_code=400, detail="Invalid mode")
 
     if hub_verify_token != settings.whatsapp_verify_token:
+        logger.error(f"Token mismatch: received={hub_verify_token}")
         raise HTTPException(status_code=403, detail="Invalid verify token")
 
+    logger.info(f"✅ Webhook verification successful")
     return {"hub_challenge": hub_challenge}
 
 
-@router.post("/")
+@router.post("/webhook")
 async def receive_message(request: Request, background_tasks: BackgroundTasks):
     """Receive incoming messages from WhatsApp (POST request)."""
     # Get raw body for signature verification

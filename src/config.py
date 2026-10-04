@@ -23,10 +23,11 @@ class Settings(BaseSettings):
     whatsapp_api_token: str
     whatsapp_verify_token: str
     whatsapp_app_secret: str
+    whatsapp_access_token: str
 
-    # Claude API
-    anthropic_api_key: str
-    claude_model: str = "claude-opus-5-5"
+    # OpenAI API
+    openai_api_key: str
+    openai_model: str = "gpt-4o-mini"
 
     # Encryption
     fernet_key: str

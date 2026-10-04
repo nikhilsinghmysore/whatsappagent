@@ -38,6 +38,7 @@ def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = settings.database_url
+    configuration.pop("sqlalchemy.track_on_columns", None)
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

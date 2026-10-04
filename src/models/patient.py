@@ -5,7 +5,7 @@ from src.db import BaseModel
 class Patient(BaseModel):
     __tablename__ = "patients"
 
-    wa_id = Column(String(20), unique=True, nullable=False, index=True)
+    wa_id = Column(String(20), primary_key=True, unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=True)
     age = Column(Integer, nullable=True)
     language = Column(String(10), default="en", nullable=False)

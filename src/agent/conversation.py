@@ -31,16 +31,16 @@ def get_or_create_conversation(db: Session, wa_id: str) -> Conversation:
 
 
 def load_conversation_history(db: Session, wa_id: str, max_turns: int = 10) -> list:
-    """Load conversation history for the agent context."""
+    """Load conversation history for the agent context (Gemini format)."""
     messages = db.query(Message).filter_by(wa_id=wa_id).order_by(Message.created_at.desc()).limit(max_turns * 2).all()
     messages.reverse()
 
     history = []
     for msg in messages:
-        role = "user" if msg.direction == "inbound" else "assistant"
+        role = "user" if msg.direction == "inbound" else "model"
         history.append({
             "role": role,
-            "content": msg.body or "[Non-text message]"
+            "parts": [{"text": msg.body or "[Non-text message]"}]
         })
 
     return history

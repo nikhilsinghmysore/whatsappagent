@@ -41,9 +41,9 @@ ADMIN_JWT_SECRET=<generated-jwt-secret>
    - `WHATSAPP_APP_SECRET` (from **Settings** → **Basic**)
 5. Generate `WHATSAPP_VERIFY_TOKEN` (random string): `openssl rand -hex 16`
 
-### Step 4: Get Anthropic API Key
+### Step 4: Get Gemini API Key
 
-Visit [console.anthropic.com](https://console.anthropic.com) and create an API key.
+Visit [Google AI Studio](https://aistudio.google.com/apikey) and create an API key.
 
 ### Step 5: Start Docker
 
@@ -132,8 +132,8 @@ WHATSAPP_API_TOKEN=<permanent-system-user-token>
 WHATSAPP_PHONE_NUMBER_ID=<prod-phone-id>
 WHATSAPP_APP_SECRET=<prod-app-secret>
 
-# Anthropic
-ANTHROPIC_API_KEY=<api-key>
+# Gemini
+GOOGLE_GENERATIVEAI_API_KEY=<api-key>
 
 # Encryption
 FERNET_KEY=<strong-key>
@@ -189,11 +189,11 @@ spec:
             secretKeyRef:
               name: homeclinic-secrets
               key: database-url
-        - name: ANTHROPIC_API_KEY
+        - name: GOOGLE_GENERATIVEAI_API_KEY
           valueFrom:
             secretKeyRef:
               name: homeclinic-secrets
-              key: anthropic-key
+              key: google-generativeai-key
         # ... other env vars
         resources:
           requests:
@@ -243,7 +243,7 @@ DEBUG=false
 DATABASE_URL=<prod-db>
 REDIS_URL=<prod-redis>
 WHATSAPP_API_TOKEN=<system-user-token>
-ANTHROPIC_API_KEY=<api-key>
+GOOGLE_GENERATIVEAI_API_KEY=<api-key>
 FERNET_KEY=<encryption-key>
 ADMIN_JWT_SECRET=<jwt-secret>
 LOG_LEVEL=info
@@ -338,15 +338,15 @@ echo $DATABASE_URL
 - Verify `WHATSAPP_APP_SECRET` matches Meta dashboard
 - Check raw request body is used for verification (not parsed JSON)
 
-### Claude API Errors
+### Gemini API Errors
 
 ```
-Error: Anthropic API key invalid
+Error: Gemini API key invalid
 ```
 
-- Verify `ANTHROPIC_API_KEY` is set correctly
-- Check API key is not revoked in console.anthropic.com
-- Verify network access to api.anthropic.com
+- Verify `GOOGLE_GENERATIVEAI_API_KEY` is set correctly
+- Check API key is not revoked in Google AI Studio
+- Verify network access to generativelanguage.googleapis.com
 
 ### WhatsApp Message Sending Failed
 

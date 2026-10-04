@@ -35,9 +35,9 @@ Go to [Meta Developers](https://developers.facebook.com/):
    - `WHATSAPP_APP_SECRET` (Settings → Basic)
 4. Create a `WHATSAPP_VERIFY_TOKEN`: `openssl rand -hex 16`
 
-## 4. Get Anthropic API Key
+## 4. Get Gemini API Key
 
-Visit [console.anthropic.com](https://console.anthropic.com), create API key, add to `.env`.
+Visit [Google AI Studio](https://aistudio.google.com/apikey), create API key, add to `.env` as `GOOGLE_GENERATIVEAI_API_KEY`.
 
 ## 5. Start Docker
 
@@ -89,7 +89,7 @@ docker-compose exec app python scripts/simulate_webhooks.py
 ## What's Included
 
 ✅ **Webhook Integration** — Receive & send WhatsApp messages  
-✅ **Claude Agent** — AI booking assistant with tool use  
+✅ **Gemini Agent** — AI booking assistant with tool use  
 ✅ **Database** — PostgreSQL with Alembic migrations  
 ✅ **Provider Management** — Register, approve, availability  
 ✅ **Booking State Machine** — Full lifecycle (requested → completed)  
@@ -161,9 +161,9 @@ docker-compose down -v && docker-compose up -d
 - Verify `WHATSAPP_APP_SECRET` matches Meta dashboard
 - Check raw body is used for verification
 
-**Claude API not responding?**
-- Verify `ANTHROPIC_API_KEY` is set
-- Check logs: `docker-compose logs app | grep Anthropic`
+**Gemini API not responding?**
+- Verify `GOOGLE_GENERATIVEAI_API_KEY` is set
+- Check logs: `docker-compose logs app | grep Gemini`
 
 **Database connection failed?**
 - Wait 30s for PostgreSQL to start

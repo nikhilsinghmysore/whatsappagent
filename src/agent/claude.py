@@ -1,8 +1,8 @@
-"""Claude API client with tool use for booking agent."""
+"""OpenAI API client with tool use for booking agent."""
 
 import json
 import logging
-from anthropic import Anthropic
+from openai import OpenAI
 from sqlalchemy.orm import Session
 from src.config import settings
 from src.agent.prompts import SYSTEM_PROMPT, EMERGENCY_KEYWORDS
@@ -10,110 +10,91 @@ from src.agent import tools
 
 logger = logging.getLogger(__name__)
 
-client = Anthropic(api_key=settings.anthropic_api_key)
+client = OpenAI(api_key=settings.openai_api_key)
 
 TOOLS = [
     {
-        "name": "search_providers",
-        "description": "Search for available providers by service type, location (pin code), and date",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "service_category": {
-                    "type": "string",
-                    "description": "Service category: doctor_visit, nurse_visit, injection, wound_care, elderly_care, sample_collection",
+        "type": "function",
+        "function": {
+            "name": "search_providers",
+            "description": "Search for available providers by service type, location (pin code), and date",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service_category": {"type": "string", "description": "Service category"},
+                    "pin_code": {"type": "string", "description": "Patient's pin code"},
+                    "scheduled_date": {"type": "string", "description": "Preferred date (YYYY-MM-DD)"},
                 },
-                "pin_code": {
-                    "type": "string",
-                    "description": "Patient's pin code",
+                "required": ["service_category", "pin_code", "scheduled_date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_booking",
+            "description": "Create a new booking for a patient with a selected provider",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "patient_wa_id": {"type": "string"},
+                    "service_category": {"type": "string"},
+                    "provider_id": {"type": "integer"},
+                    "symptoms": {"type": "string"},
+                    "address": {"type": "string"},
+                    "pin_code": {"type": "string"},
+                    "scheduled_date": {"type": "string"},
+                    "scheduled_time": {"type": "string"},
                 },
-                "scheduled_date": {
-                    "type": "string",
-                    "description": "Preferred date (YYYY-MM-DD)",
-                },
+                "required": ["patient_wa_id", "service_category", "provider_id", "symptoms", "address", "pin_code", "scheduled_date", "scheduled_time"],
             },
-            "required": ["service_category", "pin_code", "scheduled_date"],
         },
     },
     {
-        "name": "create_booking",
-        "description": "Create a new booking for a patient with a selected provider",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "patient_wa_id": {"type": "string", "description": "Patient WhatsApp ID"},
-                "service_category": {"type": "string", "description": "Service category"},
-                "provider_id": {"type": "integer", "description": "Selected provider ID"},
-                "symptoms": {"type": "string", "description": "Brief description of symptoms/needs"},
-                "address": {"type": "string", "description": "Patient's address"},
-                "pin_code": {"type": "string", "description": "Pin code"},
-                "scheduled_date": {"type": "string", "description": "Date (YYYY-MM-DD)"},
-                "scheduled_time": {"type": "string", "description": "Time (HH:MM)"},
-            },
-            "required": [
-                "patient_wa_id",
-                "service_category",
-                "provider_id",
-                "symptoms",
-                "address",
-                "pin_code",
-                "scheduled_date",
-                "scheduled_time",
-            ],
+        "type": "function",
+        "function": {
+            "name": "get_booking",
+            "description": "Get details and status of an existing booking",
+            "parameters": {"type": "object", "properties": {"booking_id": {"type": "integer"}}, "required": ["booking_id"]},
         },
     },
     {
-        "name": "get_booking",
-        "description": "Get details and status of an existing booking",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "booking_id": {"type": "integer", "description": "Booking ID"},
-            },
-            "required": ["booking_id"],
+        "type": "function",
+        "function": {
+            "name": "cancel_booking",
+            "description": "Cancel an existing booking",
+            "parameters": {"type": "object", "properties": {"booking_id": {"type": "integer"}}, "required": ["booking_id"]},
         },
     },
     {
-        "name": "cancel_booking",
-        "description": "Cancel an existing booking",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "booking_id": {"type": "integer", "description": "Booking ID to cancel"},
+        "type": "function",
+        "function": {
+            "name": "reschedule_booking",
+            "description": "Reschedule a booking to a new date and time",
+            "parameters": {
+                "type": "object",
+                "properties": {"booking_id": {"type": "integer"}, "new_date": {"type": "string"}, "new_time": {"type": "string"}},
+                "required": ["booking_id", "new_date", "new_time"],
             },
-            "required": ["booking_id"],
         },
     },
     {
-        "name": "reschedule_booking",
-        "description": "Reschedule a booking to a new date and time",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "booking_id": {"type": "integer", "description": "Booking ID"},
-                "new_date": {"type": "string", "description": "New date (YYYY-MM-DD)"},
-                "new_time": {"type": "string", "description": "New time (HH:MM)"},
+        "type": "function",
+        "function": {
+            "name": "escalate_to_human",
+            "description": "Escalate the conversation to a human admin",
+            "parameters": {
+                "type": "object",
+                "properties": {"wa_id": {"type": "string"}, "reason": {"type": "string"}},
+                "required": ["wa_id", "reason"],
             },
-            "required": ["booking_id", "new_date", "new_time"],
-        },
-    },
-    {
-        "name": "escalate_to_human",
-        "description": "Escalate the conversation to a human admin for complex issues",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "wa_id": {"type": "string", "description": "Patient WhatsApp ID"},
-                "reason": {"type": "string", "description": "Reason for escalation"},
-            },
-            "required": ["wa_id", "reason"],
         },
     },
 ]
 
 
 def check_emergency_keywords(message: str) -> str:
-    """Check if message contains emergency keywords. Returns category or None."""
+    """Check if message contains emergency keywords."""
     message_lower = message.lower()
     for category, keywords in EMERGENCY_KEYWORDS.items():
         for keyword in keywords:
@@ -128,123 +109,67 @@ async def process_message_with_agent(
     message_text: str,
     conversation_history: list,
 ) -> str:
-    """
-    Process a message using Claude agent with tool use.
-    Returns the agent's response text.
-    """
+    """Process a message using OpenAI agent with tool use."""
 
-    # Check for emergency keywords
     emergency = check_emergency_keywords(message_text)
     if emergency:
         logger.warning(f"Emergency detected from {wa_id}: {emergency}")
-        emergency_response = (
-            "🚨 EMERGENCY DETECTED\n\n"
-            "Please call 108 immediately or go to the nearest hospital.\n\n"
-            "Home Clinic is a booking platform only. We are connecting you with a human agent for immediate support."
-        )
-        # Escalate to human
         tools.escalate_to_human(db, wa_id, f"Emergency: {emergency}")
-        return emergency_response
+        return "🚨 EMERGENCY DETECTED\n\nPlease call 108 immediately or go to the nearest hospital.\n\nHome Clinic is a booking platform only. We are connecting you with a human agent for immediate support."
 
-    # Build conversation messages
-    messages = conversation_history.copy()
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Filter out any messages with null content
+    for msg in conversation_history:
+        if msg.get("content") or (msg.get("role") == "assistant" and msg.get("tool_calls")):
+            messages.append(msg)
     messages.append({"role": "user", "content": message_text})
 
-    # Initial call to Claude
-    response = client.messages.create(
-        model=settings.claude_model,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        tools=TOOLS,
+    response = client.chat.completions.create(
+        model=settings.openai_model,
         messages=messages,
+        tools=TOOLS,
+        tool_choice="auto",
+        max_tokens=1024,
     )
 
-    # Process tool use in a loop
-    while response.stop_reason == "tool_use":
-        # Find tool use block
-        tool_use_block = next(
-            (block for block in response.content if block.type == "tool_use"),
-            None,
-        )
-
-        if not tool_use_block:
-            break
-
-        tool_name = tool_use_block.name
-        tool_input = tool_use_block.input
-        tool_use_id = tool_use_block.id
+    while response.choices[0].finish_reason == "tool_calls":
+        tool_call = response.choices[0].message.tool_calls[0]
+        tool_name = tool_call.function.name
+        tool_input = json.loads(tool_call.function.arguments)
 
         logger.info(f"Agent calling tool: {tool_name}")
 
-        # Execute tool
         try:
             if tool_name == "search_providers":
-                result = tools.search_providers(
-                    db,
-                    tool_input["service_category"],
-                    tool_input["pin_code"],
-                    tool_input["scheduled_date"],
-                )
+                result = tools.search_providers(db, tool_input["service_category"], tool_input["pin_code"], tool_input["scheduled_date"])
             elif tool_name == "create_booking":
-                result = tools.create_booking(
-                    db,
-                    tool_input["patient_wa_id"],
-                    tool_input["service_category"],
-                    tool_input["provider_id"],
-                    tool_input["symptoms"],
-                    tool_input["address"],
-                    tool_input["pin_code"],
-                    tool_input["scheduled_date"],
-                    tool_input["scheduled_time"],
-                )
+                result = tools.create_booking(db, tool_input["patient_wa_id"], tool_input["service_category"], tool_input["provider_id"], tool_input["symptoms"], tool_input["address"], tool_input["pin_code"], tool_input["scheduled_date"], tool_input["scheduled_time"])
             elif tool_name == "get_booking":
                 result = tools.get_booking(db, tool_input["booking_id"])
             elif tool_name == "cancel_booking":
                 result = tools.cancel_booking(db, tool_input["booking_id"])
             elif tool_name == "reschedule_booking":
-                result = tools.reschedule_booking(
-                    db,
-                    tool_input["booking_id"],
-                    tool_input["new_date"],
-                    tool_input["new_time"],
-                )
+                result = tools.reschedule_booking(db, tool_input["booking_id"], tool_input["new_date"], tool_input["new_time"])
             elif tool_name == "escalate_to_human":
-                result = tools.escalate_to_human(
-                    db,
-                    tool_input["wa_id"],
-                    tool_input["reason"],
-                )
+                result = tools.escalate_to_human(db, tool_input["wa_id"], tool_input["reason"])
             else:
                 result = json.dumps({"error": f"Unknown tool: {tool_name}"})
-
         except Exception as e:
             logger.error(f"Tool execution error: {e}")
             result = json.dumps({"error": str(e)})
 
-        # Add assistant response and tool result to messages
-        messages.append({"role": "assistant", "content": response.content})
-        messages.append({
-            "role": "user",
-            "content": [
-                {
-                    "type": "tool_result",
-                    "tool_use_id": tool_use_id,
-                    "content": result,
-                }
-            ],
-        })
+        assistant_msg = {"role": "assistant", "tool_calls": response.choices[0].message.tool_calls}
+        if response.choices[0].message.content:
+            assistant_msg["content"] = response.choices[0].message.content
+        messages.append(assistant_msg)
+        messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
 
-        # Continue conversation
-        response = client.messages.create(
-            model=settings.claude_model,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
+        response = client.chat.completions.create(
+            model=settings.openai_model,
             messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+            max_tokens=1024,
         )
 
-    # Extract final text response
-    text_blocks = [block for block in response.content if hasattr(block, "text")]
-    final_response = "\n".join([block.text for block in text_blocks])
-
-    return final_response
+    return response.choices[0].message.content or ""

@@ -8,7 +8,7 @@ A production-ready WhatsApp booking agent for "Home Clinic", a home healthcare a
 - **PostgreSQL** with SQLAlchemy 2.0 and Alembic migrations
 - **Redis** for job queue (ARQ), dedup, and rate limiting
 - **WhatsApp Cloud API** (Meta Graph API)
-- **Anthropic Claude API** with tool use for the agent
+- **Google Gemini API** with tool use for the agent
 - **Docker** and docker-compose for local dev
 
 ## Quick Start
@@ -17,7 +17,7 @@ A production-ready WhatsApp booking agent for "Home Clinic", a home healthcare a
 
 - Docker and Docker Compose installed
 - A WhatsApp Business Account (Meta Business Platform)
-- Anthropic API key
+- Google Gemini API key
 
 ### 2. Clone and Setup
 
@@ -39,8 +39,8 @@ WHATSAPP_API_TOKEN=<your-graph-api-token>
 WHATSAPP_VERIFY_TOKEN=<generate-a-random-string>
 WHATSAPP_APP_SECRET=<your-app-secret>
 
-# Anthropic
-ANTHROPIC_API_KEY=<your-api-key>
+# Gemini
+GOOGLE_GENERATIVEAI_API_KEY=<your-api-key>
 
 # Encryption (generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 FERNET_KEY=<generated-key>

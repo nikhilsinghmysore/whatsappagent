@@ -1,6 +1,6 @@
 # Home Clinic WhatsApp Booking Agent - Project Summary
 
-A production-ready WhatsApp booking agent for home healthcare services in Mysuru, India, built with FastAPI, Claude AI, PostgreSQL, and Redis.
+A production-ready WhatsApp booking agent for home healthcare services in Mysuru, India, built with FastAPI, Gemini AI, PostgreSQL, and Redis.
 
 ## 📋 Project Status: Complete (MVP)
 
@@ -26,8 +26,8 @@ A production-ready WhatsApp booking agent for home healthcare services in Mysuru
 - ✅ Health check endpoint
 - ✅ Environment configuration via Pydantic
 
-### Phase 2: Claude Agent & Intelligence
-- ✅ Claude API integration with tool use
+### Phase 2: Gemini Agent & Intelligence
+- ✅ Gemini API integration with tool use
 - ✅ 6 booking tools (search, create, get, cancel, reschedule, escalate)
 - ✅ Emergency keyword detection (chest pain, breathing, unconsciousness, stroke, suicide)
 - ✅ Automatic 108 escalation on emergencies
@@ -169,7 +169,7 @@ completed ↔ cancelled
 - **Runtime**: Python 3.12, FastAPI, Uvicorn
 - **Database**: PostgreSQL 16, SQLAlchemy 2.0, Alembic
 - **Cache & Queue**: Redis 7, ARQ (async task queue)
-- **AI**: Anthropic Claude API (claude-opus-5-5 by default)
+- **AI**: Google Gemini API (gemini-2.0-flash by default)
 - **WhatsApp**: Meta Graph API v21.0
 - **Deployment**: Docker, docker-compose
 - **Testing**: pytest, SQLite (in-memory)
@@ -203,7 +203,7 @@ Test files:
 
 ```bash
 cp .env.example .env
-# Fill in WhatsApp & Anthropic credentials
+# Fill in WhatsApp & Gemini credentials
 docker-compose up -d
 docker-compose exec app alembic upgrade head
 docker-compose exec app python scripts/seed_providers.py
@@ -397,7 +397,7 @@ For issues or questions:
 ## 🎯 Project Goals Achieved
 
 ✅ Production-ready WhatsApp booking agent  
-✅ Claude AI with tool use for intelligent booking  
+✅ Gemini AI with tool use for intelligent booking  
 ✅ Emergency detection & escalation (108)  
 ✅ Complete provider lifecycle (register → approve → online)  
 ✅ Full booking workflow (request → complete → rate)  

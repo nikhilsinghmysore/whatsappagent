@@ -5,6 +5,7 @@ from src.db import BaseModel
 class Document(BaseModel):
     __tablename__ = "documents"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
     provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False, index=True)
     document_type = Column(String(50), nullable=False)  # id_proof, license, certificate, etc
     filename = Column(String(255), nullable=False)

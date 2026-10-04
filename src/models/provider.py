@@ -5,6 +5,7 @@ from src.db import BaseModel
 class Provider(BaseModel):
     __tablename__ = "providers"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
     wa_id = Column(String(20), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
     category = Column(String(50), nullable=False, index=True)  # doctor_visit, nurse_visit, etc
