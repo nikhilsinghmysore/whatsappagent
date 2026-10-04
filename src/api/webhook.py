@@ -39,7 +39,9 @@ async def verify_webhook(
         raise HTTPException(status_code=403, detail="Invalid verify token")
 
     logger.info(f"✅ Webhook verification successful")
-    return {"hub_challenge": hub_challenge}
+    # Return plain text, not JSON (Meta requirement)
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(hub_challenge)
 
 
 @router.post("/webhook")
